@@ -1,0 +1,188 @@
+import { NextFunction, Request, Response } from "express";
+import { Result, ValidationError, validationResult } from "express-validator";
+import { unlink } from "fs";
+import { Post, PostDocument } from "../models/item/post";
+import { StatusError } from "../types/StatusError";
+import { handleError, logError } from "../util/err";
+import { __backendDir, __imagesDir } from "../util/path";
+import path from "path";
+import { User, UserDocument } from "../models/user/user";
+
+
+export function getPosts(req: Request, res: Response, next: NextFunction) {
+    const currentPage: number = req.query.page?  Number(req.query.page) : 1;
+    const perPage:  number = 2;
+
+    let totalItems: number;
+    Post.find().countDocuments()
+    .then((count: number) => {
+        totalItems = count;
+        return Post.find()
+        .skip((currentPage -1 ) * perPage)
+        .limit(perPage);
+    })
+    .then((posts: Array<PostDocument>) => res.status(200).json({ 
+        message: 'Ferched posts', posts: posts,
+        totalItems: totalItems
+    }))
+    .catch((err: any) => {
+        const statusErr: StatusError = handleError(err);
+        next(statusErr);
+    })
+}
+
+export function postPost(req: Request, res: Response, next: NextFunction) {
+    const errors: Result<ValidationError> = validationResult(req);
+    console.log(errors);
+    
+    if(!errors.isEmpty()) {
+        const error: StatusError = new StatusError("Validation failed, entered data is uncorrect.")
+        error.statusCode = 422;
+        throw error;
+    }
+    if (!req.file){
+        const error: StatusError = new StatusError("No image provided");
+        error.statusCode = 422;
+        throw error;
+    }
+
+    const imagePath: string = req.file.path;
+    const pathArr: Array<string> = imagePath.split(path.sep);
+    const imageUrl = path.join('images', pathArr[pathArr.length-1]);
+    let creator: UserDocument;
+    const { title, content } = req.body;
+    const post = new Post({
+        title: title,
+        content: content,
+        creator: req.userId,
+        imageUrl: imageUrl
+    });
+    post.save()
+    .then((postDoc: PostDocument) => {
+        return User.findById(req.userId)
+    })
+    .then((user: UserDocument | null) => {
+        if (user){
+            creator = user;
+            user.posts.push(post);
+        }
+        return user?.save();
+
+    })
+    .then((result) => {
+        res.status(201).json({
+            message: 'Post created successfully!',
+            post: post,
+            creator: { _id: creator._id, name: creator.name}
+        })
+    })
+    .catch((err: any) => {
+        const statusErr: StatusError = handleError(err);
+        next(statusErr);
+    });
+}
+
+export function getPost(req: Request, res: Response, next: NextFunction) {
+    const postId = req.params.postId;
+    Post.findById(postId)
+    .then((post: PostDocument | null) => {
+        if (!post) {
+            const error: StatusError = new StatusError('Could not find post');
+            error.statusCode = 404;
+            throw error;
+        }
+        res.status(200).json({ message: 'Post fetched', post: post });
+    })
+    .catch((err: any) => {
+        const statusErr: StatusError = handleError(err);
+        next(statusErr);
+    })
+
+}
+
+export function putPost(req: Request, res: Response, next: NextFunction) {
+    const postId = req.params.postId;
+    let imageUrl: string;
+    if (req.file){
+        const imagePath: string = req.file.path;
+        const pathArr: Array<string> = imagePath.split(path.sep);
+        imageUrl = path.join('images', pathArr[pathArr.length-1]);
+    }else{
+        imageUrl = req.body.image;
+    }
+    const { title, content } = req.body;
+
+    if (!imageUrl){
+        const error: StatusError = new StatusError('No file picked!');
+        error.statusCode = 422;
+        throw error;
+    }
+
+    Post.findById(postId)
+    .then((post: PostDocument | null) => {
+        if (!post){
+            const error: StatusError = new StatusError("Could not find post");
+            error.statusCode = 404;
+            throw error;
+        }
+        if (post.creator.toString() !== req.userId){
+            const error: StatusError = new StatusError("Not Authorized!");
+            error.statusCode = 403;
+            throw error;
+        }
+        if (imageUrl !== post.imageUrl) {
+            clearImage(post.imageUrl);
+        }
+        post.title = title;
+        post.content = content;
+        post.imageUrl = imageUrl;
+        return post.save();
+    }) 
+    .then((post: PostDocument) => res.status(200).json({ message: 'Post updated', post: post}))
+    .catch((err: any) => {
+        const statusErr: StatusError = handleError(err);
+        next(statusErr);
+    });
+}
+
+export function deletePost(req: Request, res: Response, next: NextFunction) {
+    const postId = req.params.postId;
+    Post.findById(postId)
+    .then((post: PostDocument | null) => {
+        if(!post) {
+            const error: StatusError = new StatusError('Could not find post to delete');
+            error.statusCode = 404;
+            throw error;
+        }
+        if (post.creator.toString() !== req.userId){
+            const error: StatusError = new StatusError("Not Authorized!");
+            error.statusCode = 403;
+            throw error;
+        }
+        clearImage(post.imageUrl);
+        return post.deleteOne();
+    })
+    .then((result: any) => {
+        return User.findById(req.userId)
+    })
+    .then((user: UserDocument | null) => {
+        if (!user) {
+            const error: StatusError = new StatusError('Could not find user');
+            error.statusCode = 404;
+            throw error;
+        }
+        user.posts.pull(postId);
+        return user.save()
+    })
+    .then((user: UserDocument) => res.status(200).json({ message: 'Deleted Post'}))
+    .catch((err) => {
+        const statusErr: StatusError = handleError(err);
+        next(statusErr);
+    })
+
+}
+
+function clearImage(imagePath: string) {
+    const filePath = path.join(__backendDir, imagePath);
+    unlink(filePath, logError)
+}

@@ -1,0 +1,7 @@
+DB_CONNECTION_URL='mongodb+srv://mikandrew:vencuj-pYmvig-9kepmo@cluster0.e3zsm1t.mongodb.net/?retryWrites=true&w=majority'
+DB_HOST=localhost
+DB_USER=root
+DB_NAME=node-complete
+DB_PASS='vencuj-pYmvig-9kepmo'
+SENDGRID_API_KEY="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"
+JWT_SECRET="secret"
