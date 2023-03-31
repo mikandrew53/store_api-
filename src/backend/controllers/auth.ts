@@ -7,6 +7,7 @@ import { StatusError } from "../types/StatusError";
 import { JWT_SECRET } from "../util/envVariables";
 import { handleError } from "../util/err";
 
+
 export function putSignup(req: Request, res: Response, next: NextFunction) {
     const errors: Result<ValidationError> = validationResult(req);
     if (!errors.isEmpty()){

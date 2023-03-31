@@ -1,23 +1,25 @@
 import { Types, Document, Model, model } from "mongoose";
-import { PostSchema } from "./postSchema";
-import { removeFromCart } from "./postMethods";
+import { ItemSchema } from "./itemSchema";
+import { removeFromCart } from "./itemMethods";
 
 
-export interface PostAttributes {
+export interface ItemAttributes {
     title: string;
     imageUrl: string,
     content: string,
+    price: string,
     creator: Object
 }
 
-export interface PostDocument extends Document {
+export interface ItemDocument extends Document {
     title: string;
     imageUrl: string,
     content: string,
+    price: string,
     creator: Object
     // removeFromCart: (productId: string | Types.ObjectId) => Promise<UserDocument>;
 }
 
 // UserSchema.methods.removeFromCart = removeFromCart;
 
-export const Post: Model<PostDocument> = model<PostDocument>('Post', PostSchema);
+export const Item: Model<ItemDocument> = model<ItemDocument>('Item', ItemSchema);

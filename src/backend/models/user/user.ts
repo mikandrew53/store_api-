@@ -1,7 +1,6 @@
 import { Types, Document, Model, model } from "mongoose";
-import { PostDocument } from "../item/post";
-import { removeCart } from "./userMethods";
 import { UserSchema } from "./userSchema";
+// import { removeCart } from "./userMethods";
 
 
 export interface UserAttributes {
@@ -17,7 +16,7 @@ export interface UserDocument extends Document {
     password: string,
     name: string,
     status: string,
-    posts: Types.Array<Types.ObjectId>
+    items: Types.Array<Types.ObjectId>
     // removeCart: (productId: string | Types.ObjectId) => Promise<UserDocument>;
 }
 

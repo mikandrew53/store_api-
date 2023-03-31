@@ -5,7 +5,15 @@ const schema: SchemaDefinition = {
   password: { type: String,  required: true },
   name: { type: String, required: true },
   status: { type: String, default: 'I am new!' },
-  posts: [{ type: Types.ObjectId, ref: 'Post' }]
+  items: [
+    { 
+      productId: {
+        type: Types.ObjectId,
+        ref: 'Product'
+      }
+    }
+  ],
+  
 }
 const schemaOptions: SchemaOptions = { timestamps: true };
 

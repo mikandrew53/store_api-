@@ -11,7 +11,7 @@ import { StatusError } from "./types/StatusError";
 import * as dotenv from "dotenv";
 dotenv.config({ path: __rootDir+'/.env' });
 
-const MONGODB_URI = `mongodb+srv://mikandrew:${process.env.DB_PASS}@cluster0.e3zsm1t.mongodb.net/messages`;
+const MONGODB_URI = `mongodb+srv://mikandrew:${process.env.DB_PASS}@cluster0.e3zsm1t.mongodb.net/store`;
 
 const app:Express  = express();
 
@@ -34,7 +34,7 @@ function fileFilter (req: Request, file: Express.Multer.File , cb: Function){
 
 app.use(bodyParser.json());
 app.use(
-    multer({ storage: fileStorage, fileFilter: fileFilter}).single('image')
+    multer({ storage: fileStorage, fileFilter: fileFilter, limits: { fieldSize: 5000}}).single('image')
 );
 app.use('/images', express.static(__imagesDir));
 
